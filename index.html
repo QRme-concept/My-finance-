@@ -2,97 +2,93 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>NeoBank Pro</title>
+<title>NeoBank 4.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont;
-  background: #0a0f1c;
-  color: white;
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont;
+  background:#0a0f1c;
+  color:white;
 }
 
 /* AUTH */
-.auth {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #0a0f1c;
+.auth{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#0a0f1c;
 }
 
-.box {
-  width: 320px;
-  background: #111a2e;
-  padding: 20px;
-  border-radius: 15px;
+.box{
+  width:320px;
+  background:#111a2e;
+  padding:20px;
+  border-radius:15px;
 }
 
-input, select {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border-radius: 10px;
-  border: none;
-  box-sizing: border-box;
-  height: 44px;
+input,select{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:10px;
+  border:none;
+  box-sizing:border-box;
+  height:44px;
 }
 
 /* HEADER */
-.header {
-  padding: 20px;
-  background: linear-gradient(135deg,#00c6ff,#0072ff);
-  border-radius: 0 0 20px 20px;
+.header{
+  padding:20px;
+  background:linear-gradient(135deg,#00c6ff,#0072ff);
+  border-radius:0 0 20px 20px;
 }
 
-.balance {
-  font-size: 32px;
-  font-weight: bold;
+.balance{
+  font-size:32px;
+  font-weight:bold;
 }
 
 /* CARDS */
-.card {
-  margin: 15px;
-  background: #111a2e;
-  padding: 15px;
-  border-radius: 15px;
+.card{
+  margin:15px;
+  background:#111a2e;
+  padding:15px;
+  border-radius:15px;
 }
 
-/* BANK CARD */
-.bank-card {
-  padding: 12px;
-  border-radius: 12px;
-  margin-top: 10px;
-  background: linear-gradient(135deg,#1e3a8a,#2563eb);
+.bank-card{
+  padding:12px;
+  border-radius:12px;
+  margin-top:10px;
 }
 
-/* ROW */
-.row {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  padding: 12px;
-  margin-top: 10px;
-  background: #111a2e;
-  border-radius: 12px;
-  align-items: center;
+.row{
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr;
+  padding:12px;
+  margin-top:10px;
+  background:#111a2e;
+  border-radius:12px;
 }
 
-.income { color: #4ade80; }
-.expense { color: #f87171; }
+.income{color:#4ade80;}
+.expense{color:#f87171;}
 
-button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border-radius: 10px;
-  border: none;
-  background: #00c6ff;
-  font-weight: bold;
-  cursor: pointer;
+button{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:10px;
+  border:none;
+  background:#00c6ff;
+  font-weight:bold;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -102,11 +98,15 @@ button {
 <!-- AUTH -->
 <div class="auth" id="auth">
   <div class="box">
-    <h3>NeoBank вход</h3>
+    <h3>NeoBank</h3>
+
     <input id="user" placeholder="Логин">
     <input id="pass" type="password" placeholder="Пароль">
+    <input id="pin" type="password" placeholder="PIN (4 цифры)">
+
     <button onclick="register()">Регистрация</button>
-    <button onclick="login()">Войти</button>
+    <button onclick="login()">Вход</button>
+    <button onclick="forgot()">Забыли пароль</button>
   </div>
 </div>
 
@@ -128,7 +128,6 @@ button {
 
     <input id="desc" placeholder="Описание">
     <input id="amount" type="number" placeholder="Сумма">
-
     <input id="date" type="date">
 
     <select id="type">
@@ -136,7 +135,6 @@ button {
       <option value="expense">Расход</option>
     </select>
 
-    <!-- CATEGORY -->
     <select id="cat">
       <option>Еда</option>
       <option>Транспорт</option>
@@ -144,10 +142,8 @@ button {
       <option>Зарплата</option>
       <option>Подарки</option>
       <option>Коммуналка</option>
-      <option>Другое</option>
     </select>
 
-    <!-- CARD -->
     <select id="cardSelect"></select>
 
     <button onclick="add()">Добавить</button>
@@ -172,56 +168,72 @@ button {
 
 <script>
 
-let currentUser = null;
+let currentUser=null;
 let incomeChart, expenseChart;
 
 /* USERS */
 function getUsers(){
-  return JSON.parse(localStorage.getItem("users")) || {};
+  return JSON.parse(localStorage.getItem("users")||"{}");
 }
-
 function saveUsers(u){
-  localStorage.setItem("users", JSON.stringify(u));
+  localStorage.setItem("users",JSON.stringify(u));
 }
 
 /* REGISTER */
 function register(){
-  let u=user.value;
-  let p=pass.value;
+  const u=user.value;
+  const p=pass.value;
+  const pinVal=pin.value;
+
+  if(!u||!p||!pinVal) return alert("Заполни все поля");
+
   let users=getUsers();
 
-  if(users[u]) return alert("Пользователь уже есть");
+  if(users[u]) return alert("Уже есть пользователь");
 
   users[u]={
     pass:p,
+    pin:pinVal,
     cards:[
-      {name:"Visa Gold", balance:10000, color:"#2563eb"},
-      {name:"MasterCard", balance:5000, color:"#10b981"},
-      {name:"Digital", balance:2000, color:"#f97316"}
+      {name:"Visa",balance:10000,color:"#2563eb"},
+      {name:"MasterCard",balance:5000,color:"#10b981"},
+      {name:"Digital",balance:2000,color:"#f97316"}
     ],
     data:[]
   };
 
   saveUsers(users);
-  alert("Готово");
+  alert("Готово! Теперь вход");
 }
 
 /* LOGIN */
 function login(){
-  let u=user.value;
-  let p=pass.value;
+  const u=user.value;
+  const p=pass.value;
+  const pinVal=pin.value;
 
   let users=getUsers();
 
-  if(!users[u] || users[u].pass!==p){
-    return alert("Ошибка входа");
-  }
+  if(!users[u]) return alert("Нет пользователя");
+  if(users[u].pass!==p) return alert("Неверный пароль");
+  if(users[u].pin!==pinVal) return alert("Неверный PIN");
 
   currentUser=u;
+
   auth.style.display="none";
   app.style.display="block";
 
   render();
+}
+
+/* FORGOT */
+function forgot(){
+  const u=user.value;
+  let users=getUsers();
+
+  if(!users[u]) return alert("Нет пользователя");
+
+  alert("Ваш пароль: " + users[u].pass + " | PIN: " + users[u].pin);
 }
 
 /* ADD */
@@ -236,7 +248,7 @@ function add(){
   let cat=document.getElementById("cat").value;
   let cardIndex=+document.getElementById("cardSelect").value;
 
-  if(!desc || !amount || !date) return;
+  if(!desc||!amount||!date) return;
 
   u.data.push({desc,amount,date,type,cat,cardIndex});
 
@@ -248,14 +260,6 @@ function add(){
 function remove(i){
   let users=getUsers();
   users[currentUser].data.splice(i,1);
-  saveUsers(users);
-  render();
-}
-
-/* UPDATE CARD */
-function updateCard(i, field, value){
-  let users=getUsers();
-  users[currentUser].cards[i][field]=value;
   saveUsers(users);
   render();
 }
@@ -278,7 +282,7 @@ function render(){
 
   u.data.sort((a,b)=>new Date(b.date)-new Date(a.date));
 
-  /* SELECT CARDS */
+  /* CARD SELECT */
   u.cards.forEach((c,i)=>{
     let opt=document.createElement("option");
     opt.value=i;
@@ -312,7 +316,6 @@ function render(){
 
   /* CARDS BALANCE */
   u.cards.forEach((c,i)=>{
-
     let change=u.data
       .filter(t=>t.cardIndex===i)
       .reduce((s,t)=>s+(t.type==="income"?t.amount:-t.amount),0);
@@ -322,10 +325,8 @@ function render(){
     div.style.background=c.color;
 
     div.innerHTML=`
-      <input value="${c.name}" onchange="updateCard(${i},'name',this.value)">
-      <input type="color" value="${c.color}" onchange="updateCard(${i},'color',this.value)">
-      <input type="number" value="${c.balance}" onchange="updateCard(${i},'balance',this.value)">
-      <div>Итог: ${c.balance + change} ₽</div>
+      <b>${c.name}</b><br>
+      Баланс: ${c.balance + change} ₽
     `;
 
     cards.appendChild(div);
@@ -345,12 +346,15 @@ function draw(chart,id,data){
     type:"doughnut",
     data:{
       labels:Object.keys(data),
-      datasets:[{
-        data:Object.values(data)
-      }]
+      datasets:[{data:Object.values(data)}]
     }
   });
 
   if(id==="incomeChart") incomeChart=chart;
   if(id==="expenseChart") expenseChart=chart;
 }
+
+</script>
+
+</body>
+</html>

@@ -39,6 +39,7 @@ input, select {
   border-radius: 10px;
   border: none;
   box-sizing: border-box;
+  height: 44px;
 }
 
 /* HEADER */
@@ -69,10 +70,6 @@ input, select {
   background: linear-gradient(135deg,#1e3a8a,#2563eb);
 }
 
-.bank-card input {
-  margin-top: 6px;
-}
-
 /* ROW */
 .row {
   display: grid;
@@ -95,6 +92,7 @@ button {
   border: none;
   background: #00c6ff;
   font-weight: bold;
+  cursor: pointer;
 }
 </style>
 </head>
@@ -104,11 +102,11 @@ button {
 <!-- AUTH -->
 <div class="auth" id="auth">
   <div class="box">
-    <h3>Вход</h3>
+    <h3>NeoBank вход</h3>
     <input id="user" placeholder="Логин">
     <input id="pass" type="password" placeholder="Пароль">
-    <button onclick="login()">Войти</button>
     <button onclick="register()">Регистрация</button>
+    <button onclick="login()">Войти</button>
   </div>
 </div>
 
@@ -129,26 +127,28 @@ button {
     <h3>Операция</h3>
 
     <input id="desc" placeholder="Описание">
-
     <input id="amount" type="number" placeholder="Сумма">
 
-    <input id="date" type="date" style="margin-top:10px">
+    <input id="date" type="date">
 
     <select id="type">
       <option value="income">Доход</option>
       <option value="expense">Расход</option>
     </select>
 
-    <!-- CATEGORY HINTS -->
-    <input list="cats" id="cat" placeholder="Категория">
-    <datalist id="cats">
-      <option value="Еда"></option>
-      <option value="Транспорт"></option>
-      <option value="Развлечения"></option>
-      <option value="Зарплата"></option>
-      <option value="Подарки"></option>
-      <option value="Коммуналка"></option>
-    </datalist>
+    <!-- CATEGORY -->
+    <select id="cat">
+      <option>Еда</option>
+      <option>Транспорт</option>
+      <option>Развлечения</option>
+      <option>Зарплата</option>
+      <option>Подарки</option>
+      <option>Коммуналка</option>
+      <option>Другое</option>
+    </select>
+
+    <!-- CARD -->
+    <select id="cardSelect"></select>
 
     <button onclick="add()">Добавить</button>
   </div>
@@ -175,6 +175,7 @@ button {
 let currentUser = null;
 let incomeChart, expenseChart;
 
+/* USERS */
 function getUsers(){
   return JSON.parse(localStorage.getItem("users")) || {};
 }
@@ -185,15 +186,16 @@ function saveUsers(u){
 
 /* REGISTER */
 function register(){
-  let u=user.value, p=pass.value;
+  let u=user.value;
+  let p=pass.value;
   let users=getUsers();
 
-  if(users[u]) return alert("Уже есть");
+  if(users[u]) return alert("Пользователь уже есть");
 
   users[u]={
     pass:p,
     cards:[
-      {name:"Visa", balance:10000, color:"#2563eb"},
+      {name:"Visa Gold", balance:10000, color:"#2563eb"},
       {name:"MasterCard", balance:5000, color:"#10b981"},
       {name:"Digital", balance:2000, color:"#f97316"}
     ],
@@ -206,10 +208,14 @@ function register(){
 
 /* LOGIN */
 function login(){
-  let u=user.value, p=pass.value;
+  let u=user.value;
+  let p=pass.value;
+
   let users=getUsers();
 
-  if(!users[u] || users[u].pass!==p) return alert("Ошибка");
+  if(!users[u] || users[u].pass!==p){
+    return alert("Ошибка входа");
+  }
 
   currentUser=u;
   auth.style.display="none";
@@ -223,16 +229,25 @@ function add(){
   let users=getUsers();
   let u=users[currentUser];
 
-  let desc=descInput.value;
-  let amount=+amountInput.value;
-  let date=dateInput.value;
-  let type=typeInput.value;
-  let cat=catInput.value || "Другое";
+  let desc=document.getElementById("desc").value;
+  let amount=+document.getElementById("amount").value;
+  let date=document.getElementById("date").value;
+  let type=document.getElementById("type").value;
+  let cat=document.getElementById("cat").value;
+  let cardIndex=+document.getElementById("cardSelect").value;
 
   if(!desc || !amount || !date) return;
 
-  u.data.push({desc,amount,date,type,cat});
+  u.data.push({desc,amount,date,type,cat,cardIndex});
 
+  saveUsers(users);
+  render();
+}
+
+/* REMOVE */
+function remove(i){
+  let users=getUsers();
+  users[currentUser].data.splice(i,1);
   saveUsers(users);
   render();
 }
@@ -252,17 +267,27 @@ function render(){
 
   let list=document.getElementById("list");
   let cards=document.getElementById("cards");
+  let select=document.getElementById("cardSelect");
 
   list.innerHTML="";
   cards.innerHTML="";
+  select.innerHTML="";
 
   let income={}, expense={};
   let balance=0;
 
   u.data.sort((a,b)=>new Date(b.date)-new Date(a.date));
 
-  u.data.forEach((t,i)=>{
+  /* SELECT CARDS */
+  u.cards.forEach((c,i)=>{
+    let opt=document.createElement("option");
+    opt.value=i;
+    opt.textContent=c.name;
+    select.appendChild(opt);
+  });
 
+  /* TRANSACTIONS */
+  u.data.forEach((t,i)=>{
     let val=t.type==="income"?t.amount:-t.amount;
     balance+=val;
 
@@ -285,28 +310,29 @@ function render(){
 
   document.getElementById("balance").innerText=balance+" ₽";
 
-  renderCards(u.cards);
-  draw(incomeChart,"incomeChart",income);
-  draw(expenseChart,"expenseChart",expense);
-}
+  /* CARDS BALANCE */
+  u.cards.forEach((c,i)=>{
 
-/* CARDS UI */
-function renderCards(cards){
-  let c=document.getElementById("cards");
+    let change=u.data
+      .filter(t=>t.cardIndex===i)
+      .reduce((s,t)=>s+(t.type==="income"?t.amount:-t.amount),0);
 
-  cards.forEach((card,i)=>{
     let div=document.createElement("div");
     div.className="bank-card";
-    div.style.background=card.color;
+    div.style.background=c.color;
 
     div.innerHTML=`
-      <input value="${card.name}" onchange="updateCard(${i},'name',this.value)">
-      <input type="color" value="${card.color}" onchange="updateCard(${i},'color',this.value)">
-      <input type="number" value="${card.balance}" onchange="updateCard(${i},'balance',this.value)">
+      <input value="${c.name}" onchange="updateCard(${i},'name',this.value)">
+      <input type="color" value="${c.color}" onchange="updateCard(${i},'color',this.value)">
+      <input type="number" value="${c.balance}" onchange="updateCard(${i},'balance',this.value)">
+      <div>Итог: ${c.balance + change} ₽</div>
     `;
 
-    c.appendChild(div);
+    cards.appendChild(div);
   });
+
+  draw(incomeChart,"incomeChart",income);
+  draw(expenseChart,"expenseChart",expense);
 }
 
 /* CHART */
@@ -328,25 +354,3 @@ function draw(chart,id,data){
   if(id==="incomeChart") incomeChart=chart;
   if(id==="expenseChart") expenseChart=chart;
 }
-
-/* REMOVE */
-function remove(i){
-  let users=getUsers();
-  users[currentUser].data.splice(i,1);
-  saveUsers(users);
-  render();
-}
-
-/* INPUTS */
-let user=document.getElementById("user");
-let pass=document.getElementById("pass");
-let descInput=document.getElementById("desc");
-let amountInput=document.getElementById("amount");
-let dateInput=document.getElementById("date");
-let typeInput=document.getElementById("type");
-let catInput=document.getElementById("cat");
-
-</script>
-
-</body>
-</html>

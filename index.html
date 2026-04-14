@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>NeoBank 4.0</title>
+<title>NeoBank 5.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -15,7 +15,6 @@ body{
   color:white;
 }
 
-/* AUTH */
 .auth{
   position:fixed;
   inset:0;
@@ -32,17 +31,18 @@ body{
   border-radius:15px;
 }
 
+/* ✅ FIX: все поля идеально ровные */
 input,select{
   width:100%;
-  padding:12px;
+  height:44px;
+  padding:0 12px;
   margin-top:10px;
   border-radius:10px;
   border:none;
   box-sizing:border-box;
-  height:44px;
+  font-size:14px;
 }
 
-/* HEADER */
 .header{
   padding:20px;
   background:linear-gradient(135deg,#00c6ff,#0072ff);
@@ -54,7 +54,6 @@ input,select{
   font-weight:bold;
 }
 
-/* CARDS */
 .card{
   margin:15px;
   background:#111a2e;
@@ -77,8 +76,8 @@ input,select{
   border-radius:12px;
 }
 
-.income{color:#4ade80;}
-.expense{color:#f87171;}
+.income{color:#4ade80;}   /* 💚 green */
+.expense{color:#f87171;}  /* ❤️ red */
 
 button{
   width:100%;
@@ -102,7 +101,7 @@ button{
 
     <input id="user" placeholder="Логин">
     <input id="pass" type="password" placeholder="Пароль">
-    <input id="pin" type="password" placeholder="PIN (4 цифры)">
+    <input id="pin" type="password" placeholder="PIN">
 
     <button onclick="register()">Регистрация</button>
     <button onclick="login()">Вход</button>
@@ -185,17 +184,17 @@ function register(){
   const p=pass.value;
   const pinVal=pin.value;
 
-  if(!u||!p||!pinVal) return alert("Заполни все поля");
+  if(!u||!p||!pinVal) return alert("Заполни поля");
 
   let users=getUsers();
 
-  if(users[u]) return alert("Уже есть пользователь");
+  if(users[u]) return alert("Пользователь уже есть");
 
   users[u]={
     pass:p,
     pin:pinVal,
     cards:[
-      {name:"Visa",balance:10000,color:"#2563eb"},
+      {name:"Visa Gold",balance:10000,color:"#2563eb"},
       {name:"MasterCard",balance:5000,color:"#10b981"},
       {name:"Digital",balance:2000,color:"#f97316"}
     ],
@@ -203,7 +202,7 @@ function register(){
   };
 
   saveUsers(users);
-  alert("Готово! Теперь вход");
+  alert("Аккаунт создан");
 }
 
 /* LOGIN */
@@ -233,7 +232,7 @@ function forgot(){
 
   if(!users[u]) return alert("Нет пользователя");
 
-  alert("Ваш пароль: " + users[u].pass + " | PIN: " + users[u].pin);
+  alert("Пароль: "+users[u].pass+" | PIN: "+users[u].pin);
 }
 
 /* ADD */
@@ -264,6 +263,14 @@ function remove(i){
   render();
 }
 
+/* UPDATE CARD */
+function updateCard(i,field,value){
+  let users=getUsers();
+  users[currentUser].cards[i][field]=field==="balance"?+value:value;
+  saveUsers(users);
+  render();
+}
+
 /* RENDER */
 function render(){
   let users=getUsers();
@@ -282,7 +289,7 @@ function render(){
 
   u.data.sort((a,b)=>new Date(b.date)-new Date(a.date));
 
-  /* CARD SELECT */
+  /* cards select */
   u.cards.forEach((c,i)=>{
     let opt=document.createElement("option");
     opt.value=i;
@@ -290,7 +297,7 @@ function render(){
     select.appendChild(opt);
   });
 
-  /* TRANSACTIONS */
+  /* transactions */
   u.data.forEach((t,i)=>{
     let val=t.type==="income"?t.amount:-t.amount;
     balance+=val;
@@ -314,7 +321,7 @@ function render(){
 
   document.getElementById("balance").innerText=balance+" ₽";
 
-  /* CARDS BALANCE */
+  /* cards */
   u.cards.forEach((c,i)=>{
     let change=u.data
       .filter(t=>t.cardIndex===i)
@@ -325,19 +332,29 @@ function render(){
     div.style.background=c.color;
 
     div.innerHTML=`
-      <b>${c.name}</b><br>
-      Баланс: ${c.balance + change} ₽
+      <input value="${c.name}"
+        onchange="updateCard(${i},'name',this.value)">
+
+      <input type="color"
+        value="${c.color}"
+        onchange="updateCard(${i},'color',this.value)">
+
+      <input type="number"
+        value="${c.balance}"
+        onchange="updateCard(${i},'balance',this.value)">
+
+      <div>Итог: ${c.balance+change} ₽</div>
     `;
 
     cards.appendChild(div);
   });
 
-  draw(incomeChart,"incomeChart",income);
-  draw(expenseChart,"expenseChart",expense);
+  draw(incomeChart,"incomeChart",income,"#4ade80"); // 💚
+  draw(expenseChart,"expenseChart",expense,"#f87171"); // ❤️
 }
 
 /* CHART */
-function draw(chart,id,data){
+function draw(chart,id,data,color){
   let ctx=document.getElementById(id);
 
   if(chart) chart.destroy();
@@ -346,7 +363,10 @@ function draw(chart,id,data){
     type:"doughnut",
     data:{
       labels:Object.keys(data),
-      datasets:[{data:Object.values(data)}]
+      datasets:[{
+        data:Object.values(data),
+        backgroundColor:color
+      }]
     }
   });
 
